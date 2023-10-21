@@ -1,19 +1,10 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <stdint.h>
-
-typedef struct
-{
-    const char *filename;
-    FILE *fd;
-    uint16_t *buffer;
-    uint32_t bufferSize;
-} hgt_file_t;
-
-static const uint32_t lines = 1201, samples = 1201; // SRTM3
+#include "hgtlib.h"
 
 hgt_file_t *hgtCreateContext(const char *filename)
 {
+    // fixme: add error handling to all function calls to libc
     hgt_file_t *hgt = (hgt_file_t *)malloc(sizeof(hgt_file_t));
 
     if (!(hgt->fd = fopen(filename, "rb"))) // open file as binary
@@ -53,13 +44,20 @@ int16_t hgtReadElevationRaw(hgt_file_t *hgt, size_t offset)
     return (int16_t)le;
 }
 
-// fixme: move this in a test.c file
-int main()
+int16_t hgtReadElevation(hgt_file_t *hgt, double longitude, double latitude)
 {
-    hgt_file_t *hgt = hgtCreateContext("N48E029.hgt"); // fixme: don't hard-code
+    // note to self: longitude is Y, latitude is X
+    if (longitude <= 1.0 && latitude <= 1.0) // offset in file
+    {
+        uint16_t ulong = longitude * lines;
+        uint16_t ulat = latitude * samples;
 
-    for (int i = 0; i < 1201; i++)
-        printf("%d ", hgtReadElevationRaw(hgt, i));
-
-    return 0;
+        // printf("%d %d ", ulong, ulat);
+        return hgtReadElevationRaw(hgt, ulong * lines + ulat);
+    }
+    else // real world coordinates
+    {
+        // fixme: how should we handle this?
+        return 0;
+    }
 }
