@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <math.h>
 #include "hgtlib.h"
 
 hgt_file_t *hgtCreateContext(const char *filename)
@@ -13,12 +14,16 @@ hgt_file_t *hgtCreateContext(const char *filename)
         return NULL;
     }
 
+    hgt->filename = filename;
+
     fseek(hgt->fd, 0, SEEK_END);      // seek at the end
     hgt->bufferSize = ftell(hgt->fd); // read the file pointer
     fseek(hgt->fd, 0, SEEK_SET);      // seek at the start
 
     hgt->buffer = malloc(hgt->bufferSize);           // allocate a buffer to hold the buffer
     fread(hgt->buffer, hgt->bufferSize, 1, hgt->fd); // read the whole file
+
+    hgt->sideLength = sqrt(hgt->bufferSize / sizeof(int16_t)); // the file is a square of 16-bit integers, the buffer size is its area
 
     return hgt;
 }
@@ -49,11 +54,11 @@ int16_t hgtReadElevation(hgt_file_t *hgt, double longitude, double latitude)
     // note to self: longitude is Y, latitude is X
     if (longitude <= 1.0 && latitude <= 1.0) // offset in file
     {
-        uint16_t ulong = longitude * lines;
-        uint16_t ulat = latitude * samples;
+        uint16_t ulong = longitude * hgt->sideLength;
+        uint16_t ulat = latitude * hgt->sideLength;
 
         // printf("%d %d ", ulong, ulat);
-        return hgtReadElevationRaw(hgt, ulong * lines + ulat);
+        return hgtReadElevationRaw(hgt, ulong * hgt->sideLength + ulat);
     }
     else // real world coordinates
     {
